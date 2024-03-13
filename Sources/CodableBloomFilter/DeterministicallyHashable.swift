@@ -2,6 +2,6 @@
 
 import Foundation
 
-public protocol DeterministicallyHashable {
+public protocol DeterministicallyHashable: Hashable {
     var dataForHashingDeterministically: Data { get }
 }

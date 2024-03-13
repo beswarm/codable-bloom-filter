@@ -11,7 +11,7 @@ public enum Hash: String, Codable {
 }
 
 extension Hash {
-    func apply(_ hashable: DeterministicallyHashable) -> Int {
+    func apply(_ hashable: any DeterministicallyHashable) -> Int {
         Int(Array(hashable.dataForHashingDeterministically)
             .map(UInt32.init)
             .reduce(offsetBasis, hash))
