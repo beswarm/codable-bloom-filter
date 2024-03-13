@@ -2,6 +2,18 @@ import XCTest
 @testable import CodableBloomFilter
 
 final class CodableBloomFilterTests: XCTestCase {
+    func testEmbedHash() throws {
+        var sut = BloomFilter<String>(expectedCardinality: 10, probabilityOfFalsePositives: 0.01)
+
+        sut.insert("lol")
+        sut.insert("ok")
+
+        XCTAssert(sut.contains("lol"))
+        XCTAssert(sut.contains("ok"))
+        XCTAssertFalse(sut.contains("wtf"))
+        XCTAssertFalse(sut.contains("no"))
+    }
+    
     func testHashes() {
         XCTAssertEqual(Hash.djb232.apply("hash"), 2090320585)
         XCTAssertEqual(Hash.djb2a32.apply("hash"), 2087809207)

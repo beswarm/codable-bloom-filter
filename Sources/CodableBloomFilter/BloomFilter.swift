@@ -64,7 +64,7 @@ private extension BloomFilter {
                 hasher.combine(member)
                 hasher.combine(seed)
                 let hashValue = abs(hasher.finalize())
-                return hashValue
+                return hashValue % bits.bitCount
             })
         }
         return hashes.map { abs($0.apply(member)) % bits.bitCount }
