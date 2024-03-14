@@ -16,6 +16,12 @@ extension Hash {
             .map(UInt32.init)
             .reduce(offsetBasis, hash))
     }
+    
+    func apply(_ hashable: any DeterministicallyHashable, _ seed: String) -> Int {
+        Int(Array(hashable.dataForHashingDeterministically + Data(seed.utf8))
+            .map(UInt32.init)
+            .reduce(offsetBasis, hash))
+    }
 }
 
 // http://www.cse.yorku.ca/~oz/hash.html

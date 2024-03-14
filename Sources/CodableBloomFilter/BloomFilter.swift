@@ -5,36 +5,26 @@ import Foundation
 public struct BloomFilter<T: DeterministicallyHashable>: Codable {
     enum CodingKeys: String, CodingKey {
         case hashes
-        case hashCount
+        case hashSeeds
         case bits = "data"
     }
     
     public let hashes: [Hash]
     
-    public let hashCount: Int
+    public let hashSeeds: [String]
     
     private var bits: BitArray
     
-    public init(hashes: Set<Hash>, byteCount: Int, hashCount:Int? = nil) {
-        self.init(hashes: hashes, data: Data(repeating: 0, count: byteCount), hashCount: hashCount )
+    public init(hashes: Set<Hash>, byteCount: Int, hashSeeds: [String] = []) {
+        self.init(hashes: hashes, data: Data(repeating: 0, count: byteCount), hashSeeds: hashSeeds )
     }
     
   
-    /// Creates an empty `BloomFilter`.
-    ///
-    /// - Parameters:
-    ///   - expectedCardinality: Expected item count.
-    ///   - probabilityOfFalsePositives: Probability of false positives when testing whether an element is contained in the filter.
-    public init(expectedCardinality: Int, probabilityOfFalsePositives: Double) {
-        let params = BloomFilter.idealParameters(expectedCardinality: expectedCardinality, probabilityOfFalsePositives: probabilityOfFalsePositives)
-        self.init(hashes: [], byteCount: Int((Double(params.bitWidth)/8).rounded(.up)) , hashCount: params.hashCount)
-    }
-    
-    public init(hashes: Set<Hash>, data: Data, hashCount: Int? = nil ) {
+    public init(hashes: Set<Hash>, data: Data, hashSeeds: [String] = [] ) {
         // Sort the hashes for consistent decoding output
         self.hashes = Array(hashes.sorted { $0.rawValue < $1.rawValue })
         bits = BitArray(data: data)
-        self.hashCount = hashCount ?? self.hashes.count
+        self.hashSeeds = hashSeeds
     }
 }
 
@@ -54,20 +44,13 @@ public extension BloomFilter {
 
 private extension BloomFilter {
     func indices(_ member: T) -> [Int] {
-        
-    /// Hashes an element by mapping its sequence of bytes to an integer hash value.
-    /// - Parameter value: string to hash.
-    /// - Returns: Integer hash value.
-        if hashes.isEmpty && self.hashCount > 0   {
-            return (0..<self.hashCount).map({ seed -> Int in
-                var hasher = Hasher()
-                hasher.combine(member)
-                hasher.combine(seed)
-                let hashValue = abs(hasher.finalize())
-                return hashValue % bits.bitCount
-            })
+        if self.hashSeeds.isEmpty {
+            return hashes.map { abs($0.apply(member)) % bits.bitCount }
         }
-        return hashes.map { abs($0.apply(member)) % bits.bitCount }
+        
+        return self.hashSeeds.enumerated().map( { index, seed in
+            abs(self.hashes[index%self.hashes.count].apply(member, seed)) % bits.bitCount
+        })
     }
 }
 
@@ -79,14 +62,22 @@ extension BloomFilter {
     /// - Parameters:
     ///   - expectedCardinality: Number of items that the filter is exptected to contain.
     ///   - p: Probability of false positives.
-    /// - Returns: Pair of (`bitWidth`, `hashCount`) to use with the `init(bitWidth:hashCount:)` initializer.
-    public static func idealParameters(expectedCardinality: Int,
-                                       probabilityOfFalsePositives p: Double) -> (bitWidth: Int, hashCount: Int) {
+    /// - Returns: a filter with Pair of (`bitWidth`, `hashSeeds`) and
+    public static func idealBloomFilter(expectedCardinality: Int,
+                                       probabilityOfFalsePositives p: Double,
+                                        hashes: Set<Hash>) -> BloomFilter {
 
         let n = Double(expectedCardinality)
         let m = -1 * n * log(p) / pow(log(2), 2)
         let k = m / n * log(2)
-        return (Int(m.rounded(.up)), Int(k.rounded(.up)))
+//        return (Int(m.rounded(.up)), Int(k.rounded(.up)))
+        let bitWidth = Int(m.rounded(.up))
+        
+        let byteCount = Int((Double(bitWidth)/8).rounded(.up))
+        let hashCount = Int(k.rounded(.up))
+        let hashSeeds = (0..<hashCount).map({_ in String(Int.random(in: 0..<expectedCardinality))})
+                           
+        return BloomFilter(hashes: hashes, byteCount: byteCount, hashSeeds: hashSeeds)
 
     }
 

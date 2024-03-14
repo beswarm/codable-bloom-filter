@@ -3,7 +3,7 @@ import XCTest
 
 final class CodableBloomFilterTests: XCTestCase {
     func testEmbedHash() throws {
-        var sut = BloomFilter<String>(expectedCardinality: 10, probabilityOfFalsePositives: 0.01)
+        var sut = BloomFilter<String>.idealBloomFilter(expectedCardinality: 10, probabilityOfFalsePositives: 0.01, hashes: [.sdbm32, .sdbm32])
 
         sut.insert("lol")
         sut.insert("ok")
